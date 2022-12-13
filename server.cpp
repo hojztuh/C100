@@ -35,25 +35,34 @@ int main() {
 
     sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
-    char buf[] = "Hello, I am server!";
+    
+    int client_sock = accept(sock, (sockaddr*)&client_addr, &client_len);
+    if (client_sock == -1) perror("accept()");
+
+    char buffer[256];
 
     while (true) {
 
-        int client_sock = accept(sock, (sockaddr*)&client_addr, &client_len);
-        if (client_sock == -1) perror("accept()");
+        int len = recv(client_sock, buffer, 256, 0);
+        if (len <= 0) break;
+        buffer[len] = '\0';
 
-    
-        // write(client_sock, buf, strlen(buf) + 1);
-
-        send(client_sock, buf, strlen(buf) + 1, 0);
-
-        printf("send message to client!\n");
-
-        close(client_sock);
+        if (strcmp(buffer, "Name") == 0) {
+            char name[] = "Jack";
+            int ret = send(client_sock, name, strlen(name) + 1, 0);
+            if (ret == -1) perror("send()");
+        } else if (strcmp(buffer, "Age") == 0) {
+            char age[] = "22";
+            int ret = send(client_sock, age, strlen(age) + 1, 0);
+            if (ret == -1) perror("send()");
+        } else {
+            char message[] = "unidentified cmd!";
+            int ret = send(client_sock, message, strlen(message) + 1, 0);
+            if (ret == -1) perror("send()");
+        }
     }
 
-
-    // close(client_sock);
+    close(client_sock);
     close(sock);
  
     return 0;

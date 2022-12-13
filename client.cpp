@@ -26,9 +26,20 @@ int main() {
     
     char buffer[256];
 
-    recv(sock, buffer, 256, 0);
+    while (true) {
+        printf("Input cmd!\n");
+        // cmd: Name, Age, Exit
+        scanf("%s", buffer);
 
-    puts(buffer);
+        if (strcmp(buffer, "Exit") == 0) break;
+
+        int ret = send(sock, buffer, strlen(buffer) + 1, 0);
+
+        int len = recv(sock, buffer, 256, 0);
+
+        puts(buffer);
+
+    }
 
     close(sock);
 
