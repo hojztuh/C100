@@ -9,6 +9,11 @@
 #include <string.h>
 #include <errno.h>
 
+struct DataPacket {
+    char name[32];
+    int age;
+};
+
 int main() {
     
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -28,16 +33,21 @@ int main() {
 
     while (true) {
         printf("Input cmd!\n");
-        // cmd: Name, Age, Exit
+        // cmd: GetInfo, Exit
         scanf("%s", buffer);
 
         if (strcmp(buffer, "Exit") == 0) break;
 
         int ret = send(sock, buffer, strlen(buffer) + 1, 0);
+        if (ret == -1) perror("send()");
 
         int len = recv(sock, buffer, 256, 0);
 
-        puts(buffer);
+        // buffer can be a struct or "unidentified cmd!"(string)
+
+        DataPacket *ptr = (DataPacket *)buffer;
+
+        printf("Received:\nName: %s\nAge: %d\n", ptr->name, ptr->age);
 
     }
 

@@ -15,6 +15,11 @@
 #include <string.h>
 #include <errno.h>
 
+struct DataPacket {
+    char name[32];
+    int age;
+};
+
 int main() {
 
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -39,6 +44,8 @@ int main() {
     int client_sock = accept(sock, (sockaddr*)&client_addr, &client_len);
     if (client_sock == -1) perror("accept()");
 
+    printf("Accept client! Client IP: %s\n", inet_ntoa(client_addr.sin_addr));
+
     char buffer[256];
 
     while (true) {
@@ -47,18 +54,16 @@ int main() {
         if (len <= 0) break;
         buffer[len] = '\0';
 
-        if (strcmp(buffer, "Name") == 0) {
-            char name[] = "Jack";
-            int ret = send(client_sock, name, strlen(name) + 1, 0);
-            if (ret == -1) perror("send()");
-        } else if (strcmp(buffer, "Age") == 0) {
-            char age[] = "22";
-            int ret = send(client_sock, age, strlen(age) + 1, 0);
+        printf("Received message from client: %s\n", buffer);
+
+        if (strcmp(buffer, "GetInfo") == 0) {
+            DataPacket message = {"Jack", 22};
+            int ret = send(client_sock, (const void *)&message, sizeof(DataPacket), 0);
             if (ret == -1) perror("send()");
         } else {
             char message[] = "unidentified cmd!";
             int ret = send(client_sock, message, strlen(message) + 1, 0);
-            if (ret == -1) perror("send()");
+            if (ret == -1) perror("send()"); 
         }
     }
 
