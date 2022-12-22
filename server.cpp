@@ -28,24 +28,45 @@ struct Header {
     int cmd;
 };
 
-struct Login {
+struct Login: public Header {
+
+    Login() {
+        Length = sizeof(Login);
+        cmd = CMD_LOGIN;
+    }
+
     char Name[32];
     char Password[32];
 };
 
-struct LoginResult {
+struct LoginResult: public Header {
+    LoginResult() {
+        Length = sizeof(LoginResult);
+        cmd = CMD_LOGIN_RESULT;
+    }
+
     int result;
 };
 
-struct Logout {
+struct Logout: public Header {
+
+    Logout() {
+        Length = sizeof(Logout);
+        cmd = CMD_LOGOUT;
+    }
+
     char Name[32];
 };
 
-struct LogoutResult {
+struct LogoutResult: public Header {
+    
+    LogoutResult() {
+        Length = sizeof(LogoutResult);
+        cmd = CMD_LOGOUT_RESULT;
+    }
+
     int result;
 };
-
-
 
 int main() {
 
@@ -85,22 +106,22 @@ int main() {
         switch (header.cmd) {
             case CMD_LOGIN: {
                 Login login;
-                recv(client_sock, &login, sizeof(Login), 0);      // recv login info
+                recv(client_sock, (char *)&login + sizeof(Header), sizeof(Login) - sizeof(Header), 0);      // recv login info
+                printf("Name:%s\nPassword: %s\n", login.Name, login.Password);
                 // omit authentication of username and password 
-                Header hd = {sizeof(LoginResult), CMD_LOGIN_RESULT};
-                send(client_sock, &hd, sizeof(Header), 0);  // send header
-                LoginResult loginresult = { 0 };
-                send(client_sock, &loginresult, sizeof(LoginResult), 0);    // send login result
+                LoginResult result;
+                result.result = 0;
+                send(client_sock, &result, sizeof(LoginResult), 0);  // send result
                 break;
             }
             case CMD_LOGOUT: {
                 Logout logout;
-                recv(client_sock, &logout, sizeof(Logout), 0);      // recv logout info
+                recv(client_sock, (char *)&logout + sizeof(Header), sizeof(Logout) - sizeof(Header), 0);      // recv logout info
+                printf("Name:%s\n", logout.Name);
                 // omit authentication of username
-                Header hd = {sizeof(LogoutResult), CMD_LOGOUT_RESULT};
-                send(client_sock, &hd, sizeof(Header), 0);  // send header
-                LogoutResult logoutresult = { 1 };
-                send(client_sock, &logoutresult, sizeof(LogoutResult), 0);    // send login result
+                LogoutResult result;
+                result.result = 1;
+                send(client_sock, &result, sizeof(LogoutResult), 0);  // send result
                 break;
             }
             default: {

@@ -22,20 +22,43 @@ struct Header {
     int cmd;
 };
 
-struct Login {
+struct Login: public Header {
+
+    Login() {
+        Length = sizeof(Login);
+        cmd = CMD_LOGIN;
+    }
+
     char Name[32];
     char Password[32];
 };
 
-struct LoginResult {
+struct LoginResult: public Header {
+    LoginResult() {
+        Length = sizeof(LoginResult);
+        cmd = CMD_LOGIN_RESULT;
+    }
+
     int result;
 };
 
-struct Logout {
+struct Logout: public Header {
+
+    Logout() {
+        Length = sizeof(Logout);
+        cmd = CMD_LOGOUT;
+    }
+
     char Name[32];
 };
 
-struct LogoutResult {
+struct LogoutResult: public Header {
+    
+    LogoutResult() {
+        Length = sizeof(LogoutResult);
+        cmd = CMD_LOGOUT_RESULT;
+    }
+
     int result;
 };
 
@@ -63,33 +86,28 @@ int main() {
 
         if (strcmp(buffer, "Exit") == 0) break;
         else if (strcmp(buffer, "Login") == 0) {
-            Header header = {sizeof(Login), CMD_LOGIN};
-            Login login = { "hzh", "123456" };
+            Login login;
+            strcpy(login.Name, "hzh");
+            strcpy(login.Password, "123456");
 
             // send message to server
-            send(sock, &header, sizeof(Header), 0);
             send(sock, &login, sizeof(Login), 0);
 
             // receive message from server
-            Header hd;
             LoginResult result;
-            recv(sock, &hd, sizeof(Header), 0);
             recv(sock, &result, sizeof(LoginResult), 0);
 
             // output result
             printf("Result is %d\n", result.result);
         } else if (strcmp(buffer, "Logout") == 0) {
-            Header header = {sizeof(Logout), CMD_LOGOUT};
-            Logout logout = { "hzh" };
+            Logout logout;
+            strcpy(logout.Name, "hzh");
 
             // send message to server
-            send(sock, &header, sizeof(Header), 0);
             send(sock, &logout, sizeof(Logout), 0);
 
             // receive message from server
-            Header hd;
             LogoutResult result;
-            recv(sock, &hd, sizeof(Header), 0);
             recv(sock, &result, sizeof(LogoutResult), 0);
 
             // output result

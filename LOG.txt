@@ -38,3 +38,15 @@
 
     send header first and then send payload
 
+5. Combine header and payload into datagram and send/recv onece
+
+    struct Login: public Header {
+
+        Login() {
+            Length = sizeof(Login);
+            cmd = CMD_LOGIN;
+        }
+
+        char Name[32];
+        char Password[32];
+    };
