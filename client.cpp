@@ -9,9 +9,34 @@
 #include <string.h>
 #include <errno.h>
 
-struct DataPacket {
-    char name[32];
-    int age;
+enum CMD {
+    CMD_LOGIN,
+    CMD_LOGIN_RESULT,
+    CMD_LOGOUT,
+    CMD_LOGOUT_RESULT,
+    CMD_ERROR
+};
+
+struct Header {
+    int Length;
+    int cmd;
+};
+
+struct Login {
+    char Name[32];
+    char Password[32];
+};
+
+struct LoginResult {
+    int result;
+};
+
+struct Logout {
+    char Name[32];
+};
+
+struct LogoutResult {
+    int result;
 };
 
 int main() {
@@ -32,22 +57,44 @@ int main() {
     char buffer[256];
 
     while (true) {
-        printf("Input cmd!\n");
-        // cmd: GetInfo, Exit
+        printf("Input cmd!(Login, Logout, Exit)\n");
+        // cmd: Login, Logout, Exit
         scanf("%s", buffer);
 
         if (strcmp(buffer, "Exit") == 0) break;
+        else if (strcmp(buffer, "Login") == 0) {
+            Header header = {sizeof(Login), CMD_LOGIN};
+            Login login = { "hzh", "123456" };
 
-        int ret = send(sock, buffer, strlen(buffer) + 1, 0);
-        if (ret == -1) perror("send()");
+            // send message to server
+            send(sock, &header, sizeof(Header), 0);
+            send(sock, &login, sizeof(Login), 0);
 
-        int len = recv(sock, buffer, 256, 0);
+            // receive message from server
+            Header hd;
+            LoginResult result;
+            recv(sock, &hd, sizeof(Header), 0);
+            recv(sock, &result, sizeof(LoginResult), 0);
 
-        // buffer can be a struct or "unidentified cmd!"(string)
+            // output result
+            printf("Result is %d\n", result.result);
+        } else if (strcmp(buffer, "Logout") == 0) {
+            Header header = {sizeof(Logout), CMD_LOGOUT};
+            Logout logout = { "hzh" };
 
-        DataPacket *ptr = (DataPacket *)buffer;
+            // send message to server
+            send(sock, &header, sizeof(Header), 0);
+            send(sock, &logout, sizeof(Logout), 0);
 
-        printf("Received:\nName: %s\nAge: %d\n", ptr->name, ptr->age);
+            // receive message from server
+            Header hd;
+            LogoutResult result;
+            recv(sock, &hd, sizeof(Header), 0);
+            recv(sock, &result, sizeof(LogoutResult), 0);
+
+            // output result
+            printf("Result is %d\n", result.result);
+        } else printf("Please input the correct cammand!\n");
 
     }
 

@@ -1,0 +1,40 @@
+1. Basic tcp server
+
+    1.1 server: socket->bind->listen->accept->send/recv->close
+
+        while(true) {
+            client_sock = accept();
+
+            send/recv
+
+            close(client_sock)
+        }
+
+    1.2 client: socket->connect->send/recv->close
+
+2. Process requests in a loop
+
+    server:
+
+        client_sock = accept();
+
+        while (true) {
+            recv/send
+        }
+
+        close(client_sock);
+        close(sock);
+
+3. Send structured data
+
+    struct DataPacket {
+        char name[32];
+        int age;
+    };
+
+4. Send datagram
+
+    datagram = header + payload
+
+    send header first and then send payload
+

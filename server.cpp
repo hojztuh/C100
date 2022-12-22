@@ -15,10 +15,37 @@
 #include <string.h>
 #include <errno.h>
 
-struct DataPacket {
-    char name[32];
-    int age;
+enum CMD {
+    CMD_LOGIN,
+    CMD_LOGIN_RESULT,
+    CMD_LOGOUT,
+    CMD_LOGOUT_RESULT,
+    CMD_ERROR
 };
+
+struct Header {
+    int Length;
+    int cmd;
+};
+
+struct Login {
+    char Name[32];
+    char Password[32];
+};
+
+struct LoginResult {
+    int result;
+};
+
+struct Logout {
+    char Name[32];
+};
+
+struct LogoutResult {
+    int result;
+};
+
+
 
 int main() {
 
@@ -46,24 +73,41 @@ int main() {
 
     printf("Accept client! Client IP: %s\n", inet_ntoa(client_addr.sin_addr));
 
-    char buffer[256];
-
     while (true) {
 
-        int len = recv(client_sock, buffer, 256, 0);
+        Header header;
+
+        int len = recv(client_sock, &header, sizeof(Header), 0);    // receive header
         if (len <= 0) break;
-        buffer[len] = '\0';
 
-        printf("Received message from client: %s\n", buffer);
+        printf("Received header from client: length = %d, cmd = %d\n", header.Length, header.cmd);
 
-        if (strcmp(buffer, "GetInfo") == 0) {
-            DataPacket message = {"Jack", 22};
-            int ret = send(client_sock, (const void *)&message, sizeof(DataPacket), 0);
-            if (ret == -1) perror("send()");
-        } else {
-            char message[] = "unidentified cmd!";
-            int ret = send(client_sock, message, strlen(message) + 1, 0);
-            if (ret == -1) perror("send()"); 
+        switch (header.cmd) {
+            case CMD_LOGIN: {
+                Login login;
+                recv(client_sock, &login, sizeof(Login), 0);      // recv login info
+                // omit authentication of username and password 
+                Header hd = {sizeof(LoginResult), CMD_LOGIN_RESULT};
+                send(client_sock, &hd, sizeof(Header), 0);  // send header
+                LoginResult loginresult = { 0 };
+                send(client_sock, &loginresult, sizeof(LoginResult), 0);    // send login result
+                break;
+            }
+            case CMD_LOGOUT: {
+                Logout logout;
+                recv(client_sock, &logout, sizeof(Logout), 0);      // recv logout info
+                // omit authentication of username
+                Header hd = {sizeof(LogoutResult), CMD_LOGOUT_RESULT};
+                send(client_sock, &hd, sizeof(Header), 0);  // send header
+                LogoutResult logoutresult = { 1 };
+                send(client_sock, &logoutresult, sizeof(LogoutResult), 0);    // send login result
+                break;
+            }
+            default: {
+                Header hd = { 0, CMD_ERROR};
+                send(client_sock, &hd, sizeof(Header), 0);
+                break;
+            }
         }
     }
 
