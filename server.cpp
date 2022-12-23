@@ -96,18 +96,22 @@ int main() {
 
     while (true) {
 
-        Header header;
+        // Header header;
 
-        int len = recv(client_sock, &header, sizeof(Header), 0);    // receive header
+        char buffer[1024];
+
+        int len = recv(client_sock, buffer, sizeof(Header), 0);    // receive header
         if (len <= 0) break;
 
-        printf("Received header from client: length = %d, cmd = %d\n", header.Length, header.cmd);
+        Header *header = (Header *)buffer;
 
-        switch (header.cmd) {
+        printf("Received header from client: length = %d, cmd = %d\n", header->Length, header->cmd);
+
+        switch (header->cmd) {
             case CMD_LOGIN: {
-                Login login;
-                recv(client_sock, (char *)&login + sizeof(Header), sizeof(Login) - sizeof(Header), 0);      // recv login info
-                printf("Name:%s\nPassword: %s\n", login.Name, login.Password);
+                recv(client_sock, buffer + sizeof(Header), header->Length - sizeof(Header), 0);      // recv login info
+                Login *login = (Login *)buffer;
+                printf("Name:%s\nPassword: %s\n", login->Name, login->Password);
                 // omit authentication of username and password 
                 LoginResult result;
                 result.result = 0;
@@ -115,9 +119,9 @@ int main() {
                 break;
             }
             case CMD_LOGOUT: {
-                Logout logout;
-                recv(client_sock, (char *)&logout + sizeof(Header), sizeof(Logout) - sizeof(Header), 0);      // recv logout info
-                printf("Name:%s\n", logout.Name);
+                recv(client_sock, buffer + sizeof(Header), header->Length - sizeof(Header), 0);      // recv logout info
+                Logout *logout = (Logout *)buffer;
+                printf("Name:%s\n", logout->Name);
                 // omit authentication of username
                 LogoutResult result;
                 result.result = 1;
