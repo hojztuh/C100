@@ -50,3 +50,19 @@
         char Name[32];
         char Password[32];
     };
+
+6. Select
+
+    int select(int nfds, fd_set *readfds, fd_set *writefds,
+                  fd_set *exceptfds, struct timeval *timeout);
+    nfds: set to 1024
+    readfds: applicable for accept & recv
+    writefds: applicable for send
+    exceptfds: applicable for exceptions
+    timeout: NULL for blocked; not NULL for non-blocked
+
+    void FD_CLR(int fd, fd_set *set);   // delete a fd
+    int  FD_ISSET(int fd, fd_set *set); // check a fd
+    void FD_SET(int fd, fd_set *set);   // insert a fd
+    void FD_ZERO(fd_set *set);          // clear the whole set
+
