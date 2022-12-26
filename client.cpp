@@ -12,8 +12,11 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <thread>
 
 using namespace std;
+
+bool flag = true;
 
 enum CMD {
     CMD_LOGIN,
@@ -118,6 +121,31 @@ int Process(int _sock) {
     return 0; 
 }
 
+void CommandLine(int sock) {
+
+    while (true) {
+        char buffer[256];
+
+        scanf("%s", buffer);
+
+        if (strcmp(buffer, "Login") == 0) {
+            Login login;
+            strcpy(login.Name, "hzh");
+            strcpy(login.Password, "123456");
+            send(sock, &login, sizeof(Login), 0);
+        } else if (strcmp(buffer, "Logout") == 0) {
+            Logout logout;
+            strcpy(logout.Name, "hzh");
+            send(sock, &logout, sizeof(Logout), 0);
+        } else if (strcmp(buffer, "Exit") == 0) {
+            flag = false;
+            printf("Exit!\n");
+            break;
+        } else printf("Please input correct cmd!(Login, Logout, Exit)\n");
+
+    }
+}
+
 int main() {
     
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -127,13 +155,16 @@ int main() {
 
     sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(4567);
+    serv_addr.sin_port = htons(6789);
     serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     if (connect(sock, (sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)
         perror("connect()");
+
+    thread tid(CommandLine, sock);
+    tid.detach();
     
-    while (true) {
+    while (flag) {
 
         fd_set fd_Read;
         FD_ZERO(&fd_Read);
@@ -153,16 +184,6 @@ int main() {
             if (Process(sock) < 0) 
                 break;
         } 
-
-        printf("Process other business in the spare time\n");
-
-        // send message to server
-        Login login;
-        strcpy(login.Name, "hzh");
-        strcpy(login.Password, "123456");
-        send(sock, &login, sizeof(Login), 0);
-        sleep(1);
-
     }
 
     close(sock);

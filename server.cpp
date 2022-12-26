@@ -145,7 +145,7 @@ int main() {
 
     sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(4567);
+    serv_addr.sin_port = htons(6789);
     serv_addr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(sock, (sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)

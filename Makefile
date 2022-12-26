@@ -7,7 +7,7 @@ server:$(OBJSERVER)
 	$(GG) $(OBJSERVER) -o $@
 
 client:$(OBJCLIENT)
-	$(GG) $(OBJCLIENT) -o $@
+	$(GG) $(OBJCLIENT) -lpthread -o $@
 
 *.o:*.cpp
 	$(GG) $(CFLAGS) $^ -o $@

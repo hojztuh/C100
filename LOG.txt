@@ -66,3 +66,8 @@
     void FD_SET(int fd, fd_set *set);   // insert a fd
     void FD_ZERO(fd_set *set);          // clear the whole set
 
+7. Thread 
+
+    modify client
+    
+    use std thread to indepently deal with command line input of the client
