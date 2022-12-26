@@ -28,6 +28,7 @@ enum CMD {
     CMD_LOGIN_RESULT,
     CMD_LOGOUT,
     CMD_LOGOUT_RESULT,
+    CMD_NEW_USER_JOIN,
     CMD_ERROR
 };
 
@@ -76,6 +77,18 @@ struct LogoutResult: public Header {
     int result;
 };
 
+struct NewUserJoin:public Header {
+
+    NewUserJoin() {
+        Length = sizeof(NewUserJoin);
+        cmd = CMD_NEW_USER_JOIN;
+        sock = 0;
+    }
+
+    int sock;
+
+};
+
 std::vector<int> g_clients;
 
 int Process(int client_sock) {
@@ -84,13 +97,13 @@ int Process(int client_sock) {
 
     int len = recv(client_sock, buffer, sizeof(Header), 0);    // receive header
     if (len <= 0) {
-        printf("Client Exit!\n");
+        printf("Client<%d> Exit!\n", client_sock);
         return -1;
     }
 
     Header *header = (Header *)buffer;
 
-    printf("Received header from client: length = %d, cmd = %d\n", header->Length, header->cmd);
+    printf("Received header from client<%d>: length = %d, cmd = %d\n", client_sock, header->Length, header->cmd);
 
     switch (header->cmd) {
         case CMD_LOGIN: {
@@ -153,7 +166,9 @@ int main() {
 
         for (int i = 0; i < g_clients.size(); i++) FD_SET(g_clients[i], &fdRead);   // monitor the clients
 
-        int ret = select(FD_SETSIZE, &fdRead, &fdWrite, &fdExcept, NULL);
+        struct timeval t = {1, 0};
+        
+        int ret = select(FD_SETSIZE, &fdRead, &fdWrite, &fdExcept, &t);
         if (ret < 0) {
             perror("select()");
             break;
@@ -170,10 +185,23 @@ int main() {
             
                     int client_sock = accept(sock, (sockaddr*)&client_addr, &client_len);
                     if (client_sock == -1) perror("accept()");
+                    else {
+                        // send the new client join message to all the connected clients
 
-                    g_clients.push_back(client_sock);
+                        for (int i = 0; i < g_clients.size(); i++) {
+                            NewUserJoin message;
+                            message.sock = client_sock;
+                            send(g_clients[i], &message, sizeof(NewUserJoin), 0);  // send result 
+                        }
 
-                    printf("Accept client! Client IP: %s\n", inet_ntoa(client_addr.sin_addr));
+                        g_clients.push_back(client_sock);
+                        
+                        printf("Accept client! Client IP: %s\n", inet_ntoa(client_addr.sin_addr));
+
+                    }
+
+                    
+
                 } else {
                     int ret = Process(i);
                     if (ret < 0) {  // client Exit
@@ -184,6 +212,8 @@ int main() {
                     FD_CLR(i, &fdRead);
                 }
             }
+        
+        printf("Process other business in the spare time\n");
 
     }
 
