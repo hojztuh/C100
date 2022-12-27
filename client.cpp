@@ -1,88 +1,9 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <errno.h>
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <thread>
+#include "EasyTcpClient.hpp"
+#include "MessageHeader.hpp"
 
 using namespace std;
 
 bool flag = true;
-
-enum CMD {
-    CMD_LOGIN,
-    CMD_LOGIN_RESULT,
-    CMD_LOGOUT,
-    CMD_LOGOUT_RESULT,
-    CMD_NEW_USER_JOIN,
-    CMD_ERROR
-};
-
-struct Header {
-    int Length;
-    int cmd;
-};
-
-struct Login: public Header {
-
-    Login() {
-        Length = sizeof(Login);
-        cmd = CMD_LOGIN;
-    }
-
-    char Name[32];
-    char Password[32];
-};
-
-struct LoginResult: public Header {
-    LoginResult() {
-        Length = sizeof(LoginResult);
-        cmd = CMD_LOGIN_RESULT;
-    }
-
-    int result;
-};
-
-struct Logout: public Header {
-
-    Logout() {
-        Length = sizeof(Logout);
-        cmd = CMD_LOGOUT;
-    }
-
-    char Name[32];
-};
-
-struct LogoutResult: public Header {
-    
-    LogoutResult() {
-        Length = sizeof(LogoutResult);
-        cmd = CMD_LOGOUT_RESULT;
-    }
-
-    int result;
-};
-
-struct NewUserJoin:public Header {
-
-    NewUserJoin() {
-        Length = sizeof(NewUserJoin);
-        cmd = CMD_NEW_USER_JOIN;
-        sock = 0;
-    }
-
-    int sock;
-
-};
 
 int Process(int _sock) {
 
@@ -121,7 +42,7 @@ int Process(int _sock) {
     return 0; 
 }
 
-void CommandLine(int sock) {
+void CommandLine(EasyTcpClient *client) {
 
     while (true) {
         char buffer[256];
@@ -132,13 +53,13 @@ void CommandLine(int sock) {
             Login login;
             strcpy(login.Name, "hzh");
             strcpy(login.Password, "123456");
-            send(sock, &login, sizeof(Login), 0);
+            client->SendData(&login);
         } else if (strcmp(buffer, "Logout") == 0) {
             Logout logout;
             strcpy(logout.Name, "hzh");
-            send(sock, &logout, sizeof(Logout), 0);
+            client->SendData(&logout);
         } else if (strcmp(buffer, "Exit") == 0) {
-            flag = false;
+            client->Close();
             printf("Exit!\n");
             break;
         } else printf("Please input correct cmd!(Login, Logout, Exit)\n");
@@ -148,45 +69,22 @@ void CommandLine(int sock) {
 
 int main() {
     
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    EasyTcpClient client;
 
-    if (sock == -1) 
-        perror("socket()");
+    client.InitSocket();
+    client.Connect("127.0.0.1", 6789);
 
-    sockaddr_in serv_addr;
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(6789);
-    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    if (connect(sock, (sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)
-        perror("connect()");
-
-    thread tid(CommandLine, sock);
+    thread tid(CommandLine, &client);
     tid.detach();
     
-    while (flag) {
+    while (client.isRun()) {
 
-        fd_set fd_Read;
-        FD_ZERO(&fd_Read);
-        FD_SET(sock, &fd_Read);
-
-        struct timeval t = {1, 0};
-
-        int ret = select(FD_SETSIZE, &fd_Read, NULL, NULL, &t);
-
-        if (ret < 0) {
-            perror("select()");
-            break;
-        }
-
-        if (FD_ISSET(sock, &fd_Read)) {
-            FD_CLR(sock, &fd_Read);
-            if (Process(sock) < 0) 
-                break;
-        } 
+        client.OnRun();
     }
 
-    close(sock);
+    client.Close();
+
 
     return 0;
 }

@@ -71,3 +71,7 @@
     modify client
     
     use std thread to indepently deal with command line input of the client
+
+8. Encapsulate client
+
+    create and implement class EasyTcpClient 
