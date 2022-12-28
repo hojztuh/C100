@@ -72,7 +72,7 @@ int main() {
     EasyTcpClient client;
 
     client.InitSocket();
-    client.Connect("127.0.0.1", 6789);
+    client.Connect("127.0.0.1", 4444);
 
 
     thread tid(CommandLine, &client);

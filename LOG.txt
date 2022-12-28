@@ -75,3 +75,7 @@
 8. Encapsulate client
 
     create and implement class EasyTcpClient 
+
+9. Encapsulate server
+
+    create and implement class EasyTcpServer
