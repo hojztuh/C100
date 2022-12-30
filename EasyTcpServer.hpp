@@ -18,13 +18,54 @@
 #include <thread>
 #include "MessageHeader.hpp"
 
+#ifndef INVALID_SOCKET
 #define INVALID_SOCKET (-1)
+#endif
+#ifndef RECV_BUF_SIZE
+#define RECV_BUF_SIZE 4096
+#endif
+
+class ClientSocket {
+private:
+    int sockfd; 
+    char msgbuffer[RECV_BUF_SIZE * 10]; // message buffer
+    int LastPos;                        // the tail of the message buffer
+
+public:
+    ClientSocket(int sock = INVALID_SOCKET) {
+        sockfd = sock;
+        memset(msgbuffer, 0, sizeof(msgbuffer));
+        LastPos = 0;
+    }
+
+    virtual ~ClientSocket() {
+
+    }
+
+    int SockFd() {
+        return sockfd;
+    }
+
+    char *MsgBuffer() {
+        return msgbuffer;
+    }
+
+    int GetLastPos() {
+        return LastPos;
+    }
+
+    void SetLastPos(int pos) {
+        LastPos = pos;
+    }
+
+};
 
 class EasyTcpServer {
 
 private:
     int sock;
-    std::vector<int> g_clients;
+    char RecvBuffer[RECV_BUF_SIZE];     // receive buffer
+    std::vector<ClientSocket*> clients;
 
 public:
 
@@ -81,7 +122,7 @@ public:
             message.sock = client_sock;
             SendDataToAll(&message); 
 
-            g_clients.push_back(client_sock);
+            clients.push_back(new ClientSocket(client_sock));
             
             printf("Accept client! Client IP: %s\n", inet_ntoa(client_addr.sin_addr));
 
@@ -104,7 +145,7 @@ public:
 
         FD_SET(sock, &fdRead);  // insert sock to monitor
 
-        for (int i = 0; i < g_clients.size(); i++) FD_SET(g_clients[i], &fdRead);   // monitor the clients
+        for (int i = 0; i < clients.size(); i++) FD_SET(clients[i]->SockFd(), &fdRead);   // monitor the clients
 
         struct timeval t = {1, 0};
         
@@ -123,11 +164,15 @@ public:
                     Accept();
 
                 } else {
-                    int ret = RecvData(i);
+                    ClientSocket *pClient;
+                    for (int j = 0; j < clients.size(); j++) 
+                        if (clients[j]->SockFd() == i)
+                            pClient = clients[j];
+                    int ret = RecvData(pClient);
                     if (ret < 0) {  // client Exit
                         close(i);
-                        auto iter = find(g_clients.begin(), g_clients.end(), i);
-                        if (iter != g_clients.end()) g_clients.erase(iter);
+                        delete pClient;
+                        clients.erase(find(clients.begin(), clients.end(), pClient));
                     }
                     FD_CLR(i, &fdRead);
                 }
@@ -142,21 +187,29 @@ public:
         return sock != INVALID_SOCKET;
     }
 
-    int RecvData(int client_sock) {
+    int RecvData(ClientSocket *pClient) {
 
-        char buffer[1024];
-
-        int len = recv(client_sock, buffer, sizeof(Header), 0);    // receive header
+        int len = recv(pClient->SockFd(), RecvBuffer, RECV_BUF_SIZE, 0);
         if (len <= 0) {
-            printf("Client<%d> Exit!\n", client_sock);
+            printf("Disconnected from server!\n");
             return -1;
         }
 
-        Header *header = (Header *)buffer;
+        // copy data from RecvBuffer to MsgBuffer
+        memcpy(pClient->MsgBuffer() + pClient->GetLastPos(), RecvBuffer, len);
+        // move poiter
+        pClient->SetLastPos(pClient->GetLastPos() + len);
 
-        recv(client_sock, buffer + sizeof(Header), header->Length - sizeof(Header), 0);
-
-        OnNetMsg(client_sock, header);
+        while (pClient->GetLastPos() >= sizeof(Header)) {
+            Header *header = (Header *)pClient->MsgBuffer();
+            if (pClient->GetLastPos() >= header->Length) {    // can process one datagram
+                int remain = pClient->GetLastPos() - header->Length;
+                OnNetMsg(pClient->SockFd(),header);   // process the current datagram
+                memcpy(pClient->MsgBuffer(), pClient->MsgBuffer() + header->Length, remain);
+                //LastPos = remain;
+                pClient->SetLastPos(remain);
+            } else break;   // less than one datagram
+        }
 
         return 0; 
     }
@@ -203,16 +256,20 @@ public:
     // Send data to all the connected client
     void SendDataToAll(Header *header) {
         // send the new client join message to all the connected clients
-        for (int i = 0; i < g_clients.size(); i++) 
-            SendData(g_clients[i], header);
+        for (int i = 0; i < clients.size(); i++) 
+            SendData(clients[i]->SockFd(), header);
     }
 
     // close socket
     void Close() {
         if (sock != INVALID_SOCKET) {
-            for (int i = 0; i < g_clients.size(); i++) close(g_clients[i]);
+            for (int i = 0; i < clients.size(); i++) {
+                close(clients[i]->SockFd());
+                delete clients[i];
+            }
             close(sock);
             sock = INVALID_SOCKET;
+            clients.clear();
         }
     }
 

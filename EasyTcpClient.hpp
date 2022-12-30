@@ -18,16 +18,25 @@
 #include <thread>
 #include "MessageHeader.hpp"
 
+#ifndef INVALID_SOCKET
 #define INVALID_SOCKET (-1)
+#endif
+#ifndef RECV_BUF_SIZE
+#define RECV_BUF_SIZE 4096
+#endif
 
 class EasyTcpClient {
 
 private:
     int sock;
+    char RecvBuffer[RECV_BUF_SIZE];     // receive buffer
+    char MsgBuffer[RECV_BUF_SIZE * 10]; // message buffer
+    int LastPos;                        // the tail of the message buffer
 
 public:
     EasyTcpClient() {
         sock = INVALID_SOCKET;
+        LastPos = 0;
     }
 
     virtual ~EasyTcpClient() {
@@ -101,19 +110,27 @@ public:
 
     int RecvData() {
 
-        char buffer[1024];
-
-        int len = recv(sock, buffer, sizeof(Header), 0);    // receive header
+        // int len = recv(sock, buffer, sizeof(Header), 0);    // receive header
+        int len = recv(sock, RecvBuffer, RECV_BUF_SIZE, 0);
         if (len <= 0) {
             printf("Disconnected from server!\n");
             return -1;
         }
 
-        Header *header = (Header *)buffer;
+        // copy data from RecvBuffer to MsgBuffer
+        memcpy(MsgBuffer + LastPos, RecvBuffer, len);
+        // move poiter
+        LastPos += len;
 
-        recv(sock, buffer + sizeof(Header), header->Length - sizeof(Header), 0);
-      
-        OnNetMsg(header);
+        while (LastPos >= sizeof(Header)) {
+            Header *header = (Header *)MsgBuffer;
+            if (LastPos >= header->Length) {    // can process one datagram
+                int remain = LastPos - header->Length;
+                OnNetMsg(header);   // process the current datagram
+                memcpy(MsgBuffer, MsgBuffer + header->Length, remain);
+                LastPos = remain;
+            } else break;   // less than one datagram
+        }
 
         return 0; 
     }

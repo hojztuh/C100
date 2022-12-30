@@ -4,7 +4,7 @@ CFLAGS+=-c -Wall -g -std=c++11
 GG=g++
 
 server:$(OBJSERVER)
-	$(GG) $(OBJSERVER) -o $@
+	$(GG) $(OBJSERVER) -lpthread -o $@
 
 client:$(OBJCLIENT)
 	$(GG) $(OBJCLIENT) -lpthread -o $@

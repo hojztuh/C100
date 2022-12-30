@@ -79,3 +79,53 @@
 9. Encapsulate server
 
     create and implement class EasyTcpServer
+
+10. Solve problems when large datagrams are transferred at high frequency 
+
+    10.1 What problems?
+    1. Receive buffer overflows so that the sender cannot send data to the receiver anymore the network will be stucked. 
+    2. Since TCP is originally a protocol based one byte stream rather than message packet, at one time, you may receive
+    multiple datagrams or less than one datagram. How to correctly parse the received data?
+
+    10.2 How to solve problem 1 ? 
+
+    ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+    
+    Once collect more data. To be specific, make len bigger. Consequently, we can promptly empty the kernel level receive buffer.
+
+    10.3 How to solve problem 2 in client? 
+
+    int RecvData() {
+
+        // int len = recv(sock, buffer, sizeof(Header), 0);    // receive header
+        int len = recv(sock, RecvBuffer, RECV_BUF_SIZE, 0);
+        if (len <= 0) {
+            printf("Disconnected from server!\n");
+            return -1;
+        }
+
+        // copy data from RecvBuffer to MsgBuffer
+        memcpy(MsgBuffer + LastPos, RecvBuffer, len);
+        // move poiter
+        LastPos += len;
+
+        while (LastPos >= sizeof(Header)) {
+            Header *header = (Header *)MsgBuffer;
+            if (LastPos >= header->Length) {    // can process one datagram
+                int remain = LastPos - header->Length;
+                OnNetMsg(header);   // process the current datagram
+                memcpy(MsgBuffer, MsgBuffer + header->Length, remain);
+                LastPos = remain;
+            } else break;   // less than one datagram
+        }
+
+        return 0; 
+    }
+
+    10.4 How to solve problem 2 in server? 
+
+    Firstly, we create and implement the class ClientSocket, which contains sockfd, msgbuffer.
+    Secondly, we modify the RecvData method in class EasyTcpServer. Note that the RecvBuffer is 
+    in class EasyTcpServer. 
+
+
