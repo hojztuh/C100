@@ -128,4 +128,13 @@
     Secondly, we modify the RecvData method in class EasyTcpServer. Note that the RecvBuffer is 
     in class EasyTcpServer. 
 
+11. Test 1000 connections & add a high precision timer
+
+    In client.cpp we generate 1000 EasyTcpClient objects to connect the server and send data
+    to it. It is proved that select model can handle 1000 connections. 
+
+    We also add a high precision timer, which is implemented in class CELLTimestamp. Through 
+    the timer, we can calculate the total nubmer of datagrams received per second. 
+
+
 

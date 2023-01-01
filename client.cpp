@@ -3,48 +3,50 @@
 
 using namespace std;
 
-void CommandLine(EasyTcpClient *client) {
+const int N = 2000;
+
+bool flag = true;
+
+void CommandLine() {
 
     while (true) {
         char buffer[256];
-
         scanf("%s", buffer);
-
-        if (strcmp(buffer, "Login") == 0) {
-            Login login;
-            strcpy(login.Name, "hzh");
-            strcpy(login.Password, "123456");
-            client->SendData(&login);
-        } else if (strcmp(buffer, "Logout") == 0) {
-            Logout logout;
-            strcpy(logout.Name, "hzh");
-            client->SendData(&logout);
-        } else if (strcmp(buffer, "Exit") == 0) {
-            client->Close();
+        if (strcmp(buffer, "Exit") == 0) {
+            flag = false;
             printf("Exit!\n");
             break;
-        } else printf("Please input correct cmd!(Login, Logout, Exit)\n");
-
+        } else printf("Please input correct cmd!(Exit)\n");
     }
 }
 
 int main() {
+
+    EasyTcpClient *client[N];
+
+    for (int i = 0; i < N; i++)
+        client[i] = new EasyTcpClient();
     
-    EasyTcpClient client;
-
-    client.InitSocket();
-    client.Connect("127.0.0.1", 4567);
-
-    thread tid(CommandLine, &client);
+    thread tid(CommandLine);
     tid.detach();
     
-    while (client.isRun()) {
-
-        client.OnRun();
+    for (int i = 0; i < N; i++) {
+        if (!flag) return 0;
+        client[i]->Connect("127.0.0.1", 4567);
+        printf("client<%d> connected!\n", i + 1);
     }
 
-    client.Close();
+    Login login;
+    strcpy(login.Name, "hzh");
+    strcpy(login.Password, "123456");
+    
+    while (flag) {
+        for (int i = 0; i < N; i++)
+            client[i]->SendData(&login);
+    }
 
+    for (int i = 0; i < N; i++)
+        client[i]->Close();
 
     return 0;
 }

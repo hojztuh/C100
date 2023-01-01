@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <thread>
 #include "MessageHeader.hpp"
+#include "CELLTimestamp.hpp"
 
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET (-1)
@@ -24,6 +25,8 @@
 #ifndef RECV_BUF_SIZE
 #define RECV_BUF_SIZE 4096
 #endif
+
+int cnt;
 
 class ClientSocket {
 private:
@@ -66,6 +69,8 @@ private:
     int sock;
     char RecvBuffer[RECV_BUF_SIZE];     // receive buffer
     std::vector<ClientSocket*> clients;
+    CELLTimestamp tTime;
+    int RecvCount;      // the number of the received datagrams
 
 public:
 
@@ -118,13 +123,14 @@ public:
         int client_sock = accept(sock, (sockaddr*)&client_addr, &client_len);
         if (client_sock < 0) perror("accept()");
         else {
-            NewUserJoin message;
-            message.sock = client_sock;
-            SendDataToAll(&message); 
+            // NewUserJoin message;
+            // message.sock = client_sock;
+            // SendDataToAll(&message); 
 
             clients.push_back(new ClientSocket(client_sock));
             
-            printf("Accept client! Client IP: %s\n", inet_ntoa(client_addr.sin_addr));
+            cnt++;
+            printf("Accept client<%d>! Client IP: %s\n", cnt, inet_ntoa(client_addr.sin_addr));
 
         }
 
@@ -178,7 +184,7 @@ public:
                 }
             }
         
-        printf("Process other business in the spare time\n");
+        // printf("Process other business in the spare time\n");
 
         return true;
     }
@@ -217,25 +223,33 @@ public:
     // respond to network message
     void OnNetMsg(int client_sock, Header *header) {
 
-        printf("Received header from client<%d>: length = %d, cmd = %d\n", client_sock, header->Length, header->cmd);
+        RecvCount++;
+        auto t1 = tTime.GetElapsedSecond();
+        if (t1 >= 1.0) {
+            printf("time<%f>, clients<%ld>, RecvCount<%d>\n", t1, clients.size(), RecvCount);
+            RecvCount = 0;
+            tTime.update();
+        }
+
+        // printf("Received header from client<%d>: length = %d, cmd = %d\n", client_sock, header->Length, header->cmd);
 
         switch (header->cmd) {
             case CMD_LOGIN: {
-                Login *login = (Login *)header;
-                printf("Name:%s\nPassword: %s\n", login->Name, login->Password);
+                // Login *login = (Login *)header;
+                // printf("Name:%s\nPassword: %s\n", login->Name, login->Password);
                 // omit authentication of username and password 
-                LoginResult result;
-                result.result = 0;
-                send(client_sock, &result, sizeof(LoginResult), 0);  // send result
+                // LoginResult result;
+                // result.result = 0;
+                // send(client_sock, &result, sizeof(LoginResult), 0);  // send result
                 break;
             }
             case CMD_LOGOUT: {
-                Logout *logout = (Logout *)header;
-                printf("Name:%s\n", logout->Name);
+                // Logout *logout = (Logout *)header;
+                // printf("Name:%s\n", logout->Name);
                 // omit authentication of username
-                LogoutResult result;
-                result.result = 1;
-                send(client_sock, &result, sizeof(LogoutResult), 0);  // send result
+                // LogoutResult result;
+                // result.result = 1;
+                // send(client_sock, &result, sizeof(LogoutResult), 0);  // send result
                 break;
             }
             default: {
