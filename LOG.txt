@@ -136,5 +136,9 @@
     We also add a high precision timer, which is implemented in class CELLTimestamp. Through 
     the timer, we can calculate the total nubmer of datagrams received per second. 
 
+12. Modify client
+
+    Use multi-threads to modify client.cpp
+
 
 
