@@ -24,6 +24,7 @@ struct Login: public Header {
 
     char Name[32];
     char Password[32];
+    char data[32];
 };
 
 struct LoginResult: public Header {

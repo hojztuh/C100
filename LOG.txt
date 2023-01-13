@@ -140,5 +140,10 @@
 
     Use multi-threads to modify client.cpp
 
+13. Modify server
 
+    Use multi-threads to modify EasyTcpServer.hpp
 
+    thread<2>, time<1.000022>, clients<1000>, RecvCount<1073702>
+
+    Two threads dealing with 1000 clients, able to process more than 1000,000 datagrams per second 

@@ -27,6 +27,7 @@ int main() {
     server.InitSocket();
     server.Bind(NULL, 4567);
     server.Listen(5);
+    server.Start();
 
     thread tid(CommandLine);
     tid.detach();
